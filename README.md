@@ -1,1 +1,1 @@
-# moodle-report_pintar
+# digitos-report_pintar
