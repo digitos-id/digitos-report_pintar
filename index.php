@@ -44,13 +44,6 @@ if (!empty($id)) {
 # var_dump($courses);
 # die();
 
-# $courseid = $COURSE->id;
-# $courseidx = $_GET('courseidx');
-# echo "Test";
-# echo $_REQUEST('courseidx');
-# echo $courseidx;
-# die();
-
 # $courses = get_courses();
 # foreach ($courses as $courseid => $course){
 #         if($course->id==1)continue;
