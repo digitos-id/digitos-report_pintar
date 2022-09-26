@@ -20,7 +20,7 @@
  * Language strings to be used by report/logs
  *
  * @package    report_log
- * @copyright  1999 onwards Martin Dougiamas  {@link http://moodle.com}
+ * @copyright  2022 onwards Prihantoosa  {@link http://digitos.id}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>;.
 
 /**
- * @package     local_pintar_analytics
+ * @package     Report_pintar_analytics
  * @copyright   2022 Prihantoosa <toosa@digitos.id> 
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -27,9 +27,6 @@ require_once('../../config.php');
 require_once('../../completion/classes/external.php');
 require_once($CFG->dirroot.'/completion/classes/external.php');
 
-# require_login();
-
-
 $id          = optional_param('id', 0, PARAM_INT);// Course ID.
 
 
@@ -40,40 +37,6 @@ if (!empty($id)) {
     $id = $SITE->id;
 }
 
-
-# var_dump($courses);
-# die();
-
-# $courses = get_courses();
-# foreach ($courses as $courseid => $course){
-#         if($course->id==1)continue;
-#         $coursecontext = context_course::instance($course->id);
-#         $enrolledstudents = get_enrolled_users($coursecontext, 'moodle/course:isincompletionreports');
-#         $already70='';
-#         $still30='';
-#         foreach ($enrolledstudents as $user) {
-#                 $course_user_stat = core_completion_external::get_activities_completion_status($course->id,$user->id);
-#                 $activities = $course_user_stat['statuses'];
-#                 $totalactivities = count($activities);
-#                 $completed = 0;
-#                 foreach($activities as $activity){
-#                         if($activity['timecompleted']!=0)$completed+=1;
-#                 }
-#                 $studentcompletion=($completed/$totalactivities)*100;
-#                 if($studentcompletion>70)$already70+=1;
-#                 else $still30 +=1;
-# 
-#         }
-#         echo $course->fullname." diatas 70%: ".$already70."<br>";
-#         echo $course->fullname." dibawah 30%: ".$still30."<br>";
-# 
-# }
-# 
-# die();
-
-# $context = context_course::instance($courseid);
-# $context = context_course::instance($id);
-# $PAGE->set_context($context);
 
 $url = new moodle_url("/report/pintar/index.php", $params);
 
@@ -126,21 +89,43 @@ $already70=0;
 $still30=0;
 $persen70=0;
 $persen30=0;
+$prosen_assignmentcompleted=0; //di atas 90%
+$total_assignmentcompleted=0; //jumlah user yang assignment completed di atas 90%
+$total_prosen_assignmentcompleted=0; //di atas 90%
+$total_assignmentNOTcompleted=0; //di atas 90%
+$prosen_total_assignmentcompleted=0;
 
-
-foreach ($enrolledstudents as $user) {
+   foreach ($enrolledstudents as $user) {
+	//Menghitung status setiap user
 	$course_user_stat = custom_get_user_course_completion($id,$user->id);
 
 	$activities = $course_user_stat['statuses'];
-
-
+	// Banyaknya aktivitas
 	$totalactivities = count($activities);
-
+		// nilai awal setiap user
                 $completed = 0;
-                $iscomplete = false;
-                foreach($activities as $activity){
+		$iscomplete = false;
+		$jum_assignment = 0;
+		$jum_assignmentcompleted = 0;
+		$prosentase_assignmentcomplete = 0;
+
+		foreach($activities as $activity){
+		       
+	   	    if($activity['modname']=='assign')$jum_assignment+=1;	
+		     if($activity['timecompleted']!=0 && 
+		        $activity['modname']=='assign')$jum_assignmentcompleted+=1;
+
+		    # var_dump($activity['modname'],$assigncount);
+		    # die();
+
                     if($activity['timecompleted']!=0)$completed+=1;
 		}
+
+		$prosen_assignmentcompleted = $jum_assignmentcompleted / $jum_assignment * 100;	
+
+		  # var_dump($completed, $jum_assignment, $jum_assignmentcompleted,$prosen_assignmentcompleted);
+	      	  # die();
+		if ($prosen_assignmentcompleted >=90)$total_assignmentcompleted+=1;
 
                 if($totalactivities>0){
                 $studentcompletion=($completed/$totalactivities)*100;
@@ -150,58 +135,43 @@ foreach ($enrolledstudents as $user) {
                 else $still30 +=1;
 
 
-            }
+	}
+
 // End of hitung completion
+//
+
 echo 'Total students:'.$totalenrolledstudents."<br>";
 echo 'Total activities:'.$totalactivities."<br>";
+echo 'Total Complete Assignment:'.$total_assignmentcompleted."<br>";
 echo 'Diatas 70%:'.$already70."<br>";
 echo 'Dibawah 30%:'.$still30."<br>";
+echo 'Total Penugasan > 90%:'.$total_assignmentcompleted." orang<br>";
+$total_assignmentNOTcompleted=$totalenrolledstudents-$total_assignmentcompleted;
+$prosen_total_assignmentcompleted = ($total_assignmentcompleted / $totalenrolledstudents)*100;
+echo 'Total Penugasan < 90%:'.$total_assignmentNOTcompleted." orang<br>";
+echo 'Prosentase Penugasan > 90%:'.$prosen_total_assignmentcompleted." %<br>";
 
             // Nilai Prosentase
 $persen70 = $already70/$totalenrolledstudents*100;
 $persen30 = $still30/$totalenrolledstudents*100;
 
-# var_dump($still30);
-# die();
-#
-// 
-// Membaca data yang dikirim melalui URL berupa array yang dikirim menggunakan 
-// $url + http_build_query($dataid);
-//
-// $idArray = explode('&',$_SERVER["QUERY_STRING"]);
-# foreach ($idArray as $index => $avPair) {
-#  list($ignore, $value) = explode('=',$avPair);
-#  $id[$index] = $value;
-# }
 
 $chart = new core\chart_bar();
-            $serie2 = new core\chart_series('Penyelesaian >70%', [$persen70]);
             $serie1 = new core\chart_series('Penyelesaian <30%', [$persen30]);
+            $serie2 = new core\chart_series('Penyelesaian >70%', [$persen70]);
+            $serie3 = new core\chart_series('Penugasan >90%', [$prosen_total_assignmentcompleted]);
             # $serie3 = new core\chart_series('Penugasan >90%', [16, 8.5,7.6,20.3 ]);
 
             $chart->set_title('Keterlibatan dan Keaktifan Peserta');
             $chart->add_series($serie1);
 	    $chart->add_series($serie2);
+	    $chart->add_series($serie3);
 
 	    # $yaxis = $chart->get_yaxis(1,true);
 	    # $yaxis->set_max(50);
 	    # $yaxis->set_min(0);
+	    # $yaxis->title(Dalam %');
 
-# $chart = new core\chart_bar();
-# $serie1 = new core\chart_series('Penyelesaian <30%', [65, 94, 80,71]);
-# $serie2 = new core\chart_series('Penyelesaian >70%', [22, 6, 9,20]);
-# $serie3 = new core\chart_series('Penugasan >90%', [16, 8.5,7.6,20.3 ]);
-# # $serie4 = new core\chart_series('My series title4', [400, 460, 1120]);
-# 
-# $chart->set_title('Keterlibatan dan Keaktifan Peserta');
-# $chart->add_series($serie1);
-# $chart->add_series($serie2);
-# $chart->add_series($serie3);
-# # $chart->add_series($serie4);
-# $chart->set_labels(['PTM Kepsek', 'PJJ-SMP', 'PJJ-SD', 'PJJ-Kepsek']);
-# $chart->set_labels($labels);
-
-# echo $OUTPUT->render("Test");
 echo $OUTPUT->render($chart);
 # foreach ($id as $iduser) {
 #  echo $OUTPUT->render($iduser);
@@ -209,45 +179,6 @@ echo $OUTPUT->render($chart);
 
 echo $OUTPUT->footer();
 
-# public static function custom_get_user_course_completion($courseid,$userid){
-#         $course = get_course($courseid);
-#         $user = core_user::get_user($userid, '*', MUST_EXIST);
-#         core_user::require_active_user($user);
-# 
-#         $completion = new completion_info($course);
-#         $activities = $completion->get_activities();
-#         $result = array();
-#         foreach ($activities as $activity) {
-# 
-#         $cmcompletion = \core_completion\cm_completion_details::get_instance($activity, $user->id);
-#         $cmcompletiondetails = $cmcompletion->get_details();
-# 
-#         $details = [];
-#         foreach ($cmcompletiondetails as $rulename => $rulevalue) {
-#             $details[] = [
-#                 'rulename' => $rulename,
-#                 'rulevalue' => (array)$rulevalue,
-#             ];
-#         }
-#         $result[]=[
-#             'state'         => $cmcompletion->get_overall_completion(),
-#             'timecompleted' => $cmcompletion->get_timemodified(),
-#             'overrideby'    => $cmcompletion->overridden_by(),
-#             'hascompletion'    => $cmcompletion->has_completion(),
-#             'isautomatic'      => $cmcompletion->is_automatic(),
-#             'istrackeduser'    => $cmcompletion->is_tracked_user(),
-#             'overallstatus'    => $cmcompletion->get_overall_completion(),
-#             'details'          => $details,
-#         ];
-#     }
-#     $results = array(
-#         'statuses' => $result,
-#     );
-#     return $results;
-
-# }
-
-# }
 function custom_get_user_course_completion($courseid,$userid){
         $course = get_course($courseid);
         $user = core_user::get_user($userid, '*', MUST_EXIST);
@@ -258,27 +189,43 @@ function custom_get_user_course_completion($courseid,$userid){
         $result = array();
         foreach ($activities as $activity) {
 
-        $cmcompletion = \core_completion\cm_completion_details::get_instance($activity, $user->id);
-        $cmcompletiondetails = $cmcompletion->get_details();
+	$cmcompletion = \core_completion\cm_completion_details::get_instance($activity, $user->id);
+	print_object($activity->modname);
 
+
+	# var_dump($modtype);
+	# die();
+        $cmcompletiondetails = $cmcompletion->get_details();
+        # $cmcompletiondetails = $cmcompletion->get_details('modname');
+
+	# var_dump($cmcompletiondetails);
+	# die();
+	
         $details = [];
         foreach ($cmcompletiondetails as $rulename => $rulevalue) {
             $details[] = [
                 'rulename' => $rulename,
                 'rulevalue' => (array)$rulevalue,
             ];
-        }
+	}
+
         $result[]=[
-            'state'         => $cmcompletion->get_overall_completion(),
+	    'state'         => $cmcompletion->get_overall_completion(),
             'timecompleted' => $cmcompletion->get_timemodified(),
             'overrideby'    => $cmcompletion->overridden_by(),
             'hascompletion'    => $cmcompletion->has_completion(),
             'isautomatic'      => $cmcompletion->is_automatic(),
             'istrackeduser'    => $cmcompletion->is_tracked_user(),
             'overallstatus'    => $cmcompletion->get_overall_completion(),
-            'details'          => $details,
-        ];
-    }
+            'modname'    	=> $activity->modname,
+	    'details'          => $details,
+	];
+
+
+	# var_dump($result);
+	# die();
+	}
+
     $results = array(
         'statuses' => $result,
     );
